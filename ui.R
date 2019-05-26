@@ -2,13 +2,13 @@ library(shiny)
 library(shinydashboard)
 library(chorddiag)
 library(heatmaply)
-
+library(sunburstR)
 
 ## ui.R ##
 sidebar <- dashboardSidebar(
   sidebarMenu(
     menuItem("Single Consideration", tabName = "single"),
-    menuItem("Sunbrust Visualization", tabName = "sunbrust"),
+    menuItem("Sunburst Visualization", tabName = "sunburst"),
     menuItem("Chord Diagram", tabName = "chord"),
     menuItem("HeatMap", tabName = "heat")
     )
@@ -30,8 +30,8 @@ body <- dashboardBody(
             
     ),
     
-    tabItem(tabName = "sunbrust",
-            h2("Sunbrust Visualization"),
+    tabItem(tabName = "sunburst",
+            h2("Sunburst Visualization"),
             fluidRow(
               #column(10, align="center",
               #       sunburstOutput("sunburst", width = "1200", height = "1200")
