@@ -8,6 +8,7 @@ library(plyr)
 library(tidyr)
 library(chorddiag)
 library(heatmaply)
+library(plotly)
 
 ## model 1
 ## data preparation ##
@@ -77,6 +78,27 @@ myMatHeat2 <- t(myMatHeat2)
 
 datapielist <- list(data_pie, data_pie2)
 
+
+library(caret)
+library(e1071)
+mat <- confusionMatrix(factor(data$predicted2),factor(data$label2))
+mat_by_label <- data.frame(mat$byClass)
+ov <- data.frame(mat$overall)
+df <- subset(mat_by_label, select = c('Balanced.Accuracy'))
+# mod1 und mod2 als kopie der vorhandenen daten einfügen 
+# muss bei mehreren modellen mit cbind gemacht werden
+ov$mod1 <- ov$mat.overall
+df$mod1 <- df$Balanced.Accuracy
+
+mat2 <- confusionMatrix(factor(data2$predicted2),factor(data2$label2))
+mat_by_label2 <- data.frame(mat2$byClass)
+ov2 <- data.frame(mat2$overall)
+df2 <- subset(mat_by_label2, select = c('Balanced.Accuracy'))
+
+ov$mod2 <- ov2$mat2.overall
+df$mod2 <- df2$Balanced.Accuracy
+
+
 shinyServer(function(input, output) {
   
   output$objects_x <- renderUI({
@@ -125,5 +147,30 @@ shinyServer(function(input, output) {
 
   output$heatmap <- renderPlotly({heatmaply(myMatHeat, cellnote = myMatHeat,  dendrogram = 'none', plot_method = 'plotly', column_text_angle = 0,label_names = c("predicted","class","count")) %>% layout(xaxis = list(position = 1, side = "top"))})
   
+  output$click <- renderPrint({
+    d <- event_data("plotly_click")
+    if (is.null(d)) "Click on Class" else d 
+  })
+  
+  
+  # functions for Heatmap/Confusion matrix
+  get_labels  <- function(x,y){
+    row_labels <- rev(as.vector(rownames(myMatHeat)))
+    col_labels <- colnames(myMatHeat)
+    return(c(col_labels[x],row_labels[y]))
   }
+  labels = get_labels(d[x],d[y])
+  frame_heat = subset(data, label2 == labels[1] & predicted2 == labels[2])
+
+  ### bardiagram allg.
+  
+  output$barchart_allg <- renderPlotly({plot_ly(ov, x = row.names(ov), y = ~mod1, type = 'bar', name = 'mod1')%>% add_trace(y = ~mod2, name = 'mod2')%>% layout(yaxis = list(title = 'Value') , barmode ='group')})
+  
+  output$barchart_allg2 <- renderPlotly({plot_ly(df, x = row.names(df), y = ~mod1, type = 'bar', name = 'mod1')%>% add_trace(y = ~mod2, name = 'mod2')%>% layout(yaxis = list(title = 'Balanced accuracy') , barmode ='group')})
+  
+
+  
+  
+  }
+  
 )
