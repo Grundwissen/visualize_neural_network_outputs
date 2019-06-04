@@ -4,14 +4,15 @@ library(chorddiag)
 library(heatmaply)
 library(sunburstR)
 
+
 ## ui.R ##
 sidebar <- dashboardSidebar(
   sidebarMenu(
     menuItem("Single Consideration", tabName = "single"),
-    menuItem("Sunburst Visualization", tabName = "sunburst"),
+    menuItem("Sunbrust Visualization", tabName = "sunbrust"),
     menuItem("Chord Diagram", tabName = "chord"),
-    menuItem("HeatMap", tabName = "heat")
-    )
+    menuItem("HeatMap", tabName = "heat"),
+    menuItem("Bar Charts", tabName = "bar"))
   
 )
 
@@ -30,20 +31,26 @@ body <- dashboardBody(
             
     ),
     
-    tabItem(tabName = "sunburst",
-            h2("Sunburst Visualization"),
+    tabItem(tabName = "sunbrust",
+            h2("Sunbrust Visualization"),
             fluidRow(
-              #column(10, align="center",
-              #       sunburstOutput("sunburst", width = "1200", height = "1200")
               
               box(
                 uiOutput("sunburst_auswahl_links"),
-                sunburstOutput("sunburst", width = "1200", height = "1200")),
+                sunburstOutput("sunburst", width = "500", height = "500")),
               
               box(
                 uiOutput("sunburst_auswahl_rechts"),
-                sunburstOutput("sunburst2", width = "1200", height = "1200"))
-        
+                sunburstOutput("sunburst2", width = "500", height = "500"))
+  
+             
+            ),
+            fluidRow(
+              
+              verbatimTextOutput("sunburstclicked_li")
+            ),
+            fluidRow(
+              verbatimTextOutput("sunburstclicked_re")
             )
     ),
     tabItem(tabName = "chord",
@@ -59,9 +66,23 @@ body <- dashboardBody(
             fluidRow(
               column(10, align="center", 
                      plotlyOutput("heatmap", width = "100%", height="600px")
-              )
+              ),
+              column(10,
+                     verbatimTextOutput("click")
+              )  
             )
-    )
+    ),
+    tabItem(tabName = "bar",
+            h2("Bar Chart"),
+            fluidRow(
+              column(10, align="center",
+                     plotlyOutput("barchart_allg", width = "100%", height="600px"),
+                     br(),
+                     verbatimTextOutput("barcklick1"),
+                     br(),
+                     plotlyOutput("barchart_allg2", width = "100%", height="600px")
+                     
+            )))
     
   )
 )
