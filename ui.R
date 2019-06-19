@@ -49,11 +49,11 @@ body <- dashboardBody(
               
             ),
             fluidRow(
+              box(width = 10, height = 5000,
+                  uiOutput("plots_sunbrust_links")),
               
-              verbatimTextOutput("sunburstclicked_li")
-            ),
-            fluidRow(
-              verbatimTextOutput("sunburstclicked_re")
+              box(width = 2, height = 5000,
+                  uiOutput("plotimages_sunburst_links"))
             )
     ),
     tabItem(tabName = "chord",
@@ -67,7 +67,9 @@ body <- dashboardBody(
     tabItem(tabName = "heat",
             h2("Heat Map"),
             fluidRow(
+              
               column(10, align="center", 
+                     uiOutput("heatmap_auswahl"),
                      plotlyOutput("heatmap", width = "100%", height="600px")
               ),
               column(10,
