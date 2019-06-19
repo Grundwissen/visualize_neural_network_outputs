@@ -10,6 +10,14 @@ library(chorddiag)
 library(heatmaply)
 library(plotly)
 library(data.table)
+library(caret)
+library(e1071)
+
+# Colors
+groupColors <-c("#7293CB","#84BA5B","#D35E60","#808585","#9067A7","#AB6857","#CCC210","#00008B","#FFB6C1","#E1974C") #Chord
+colors = c("#E1974C","#7293CB","#84BA5B","#D35E60","#808585","#9067A7","#AB6857","#CCC210","#00008B","#FFB6C1") #sunburst
+barcolors = c("#E1974C","#FFB6C1","#9067A7","#808585","#D35E60","#AB6857","#CCC210","#00008B","#84BA5B","#7293CB") #bars
+
 
 ## model 1
 ## data preparation ##
@@ -77,34 +85,77 @@ myMatHeat2[as.matrix(data_heat2[c("label2", "predicted2")])] <- data_heat2[["fre
 myMatHeat2 <- t(myMatHeat2)
 
 
-datapielist <- list(data_pie, data_pie2) # auswahl für sunbursts
+## model 3
+## data preparation ##
+data3 <- read_json('test3.json')
+data3 <- data.frame(do.call(rbind,data3))
+data3$label <- unlist(data3$label)
+data3$label2 <- unlist(data3$label2)
+data3$predicted <- unlist(data3$predicted)
+data3$predicted2 <- unlist(data3$predicted2)
+data3$correct <- data3$label == data3$predicted
+data3$ID <- seq.int(nrow(data3))
 
-heatmap_list <- list(myMatHeat, myMatHeat2) # auswahl für heatmap
+## piediagram ##
+dataFALSE3 <- data3[data3$label != data3$predicted,]
+data_pie3 <- count(dataFALSE3[,5:6])
+data_pie3 <- data_pie3 %>% unite(col = Type, label2:predicted2, sep = "-")
 
-data_for_heatmap_list <-list(data, data2) # datalist for heatmap auswahl
+## Chorddiagram ##
+data_Chord3 <- dataFALSE3[,c("label2","predicted2")]
+data_Chord3 <- count(data_Chord3[,1:2])
+nameVals3 <- sort(unique(unlist(data_Chord3[1:2])))
+myMat3 <- matrix(0, length(nameVals3), length(nameVals3), dimnames = list(nameVals3, nameVals3))
+myMat3[as.matrix(data_Chord3[c("label2", "predicted2")])] <- data_Chord3[["freq"]]
+
+## HeatMap ##
+data_heat3 <- data3[,c("label2","predicted2")]
+data_heat3 <- count(data_heat3[,1:2])
+
+nameValsHeat3 <- sort(unique(unlist(data_heat3[1:2])))
+myMatHeat3 <- matrix(0, length(nameValsHeat3), length(nameValsHeat3), dimnames = list(nameValsHeat3, nameValsHeat3))
+myMatHeat3[as.matrix(data_heat3[c("label2", "predicted2")])] <- data_heat3[["freq"]]
+myMatHeat3 <- t(myMatHeat3)
 
 
-library(caret)
-library(e1071)
+
+
+datapielist <- list(data_pie, data_pie2, data_pie3) # auswahl für sunbursts
+
+heatmap_list <- list(myMatHeat, myMatHeat2, myMatHeat3) # auswahl für heatmap
+
+data_for_heatmap_list <-list(data, data2, data3) # datalist for heatmap auswahl
+
+
+
+#Matric Model 1
 mat <- confusionMatrix(factor(data$predicted2),factor(data$label2))
 mat_by_label <- data.frame(mat$byClass)
 ov <- data.frame(mat$overall)
 df <- subset(mat_by_label, select = c('Balanced.Accuracy'))
-# mod1 und mod2 als kopie der vorhandenen daten einfügen 
-# muss bei mehreren modellen mit cbind gemacht werden
 ov$mod1 <- ov$mat.overall
 df$mod1 <- df$Balanced.Accuracy
 
+
+#Matric Model 2
 mat2 <- confusionMatrix(factor(data2$predicted2),factor(data2$label2))
 mat_by_label2 <- data.frame(mat2$byClass)
 ov2 <- data.frame(mat2$overall)
 df2 <- subset(mat_by_label2, select = c('Balanced.Accuracy'))
-
 ov$mod2 <- ov2$mat2.overall
 df$mod2 <- df2$Balanced.Accuracy
 
 
-#### dev area ####
+#Matric Model 3
+mat3 <- confusionMatrix(factor(data3$predicted2),factor(data3$label2))
+mat_by_label3 <- data.frame(mat3$byClass)
+ov3 <- data.frame(mat3$overall)
+df3 <- subset(mat_by_label2, select = c('Balanced.Accuracy'))
+ov$mod3 <- ov3$mat3.overall
+df$mod3 <- df3$Balanced.Accuracy
+
+
+#### Shiny dev area ####
 
 shinyServer(function(input, output) {
   
@@ -115,14 +166,14 @@ shinyServer(function(input, output) {
   y <- reactive({unlist(data[input$TrainingObject,]$array)})
   output$plot_objects <- renderPlot({
     
-  barplot(y(), names.arg = c("Class 0", "Class 1",  "Class 2",  "Class 3",  "Class 4",  "Class 5",  "Class 6",  "Class 7",  "Class 8",  "Class 9"))
+  barplot(y(), names.arg = c("Tshirt/Top","Trouser","Pullover","Dress","Coat","Sandal","Shirt","Sneaker","Bag","Ankle boot"))
     
   })
   
   array_image <- reactive({
     yourMatrix <- matrix(unlist(data[input$TrainingObject,]$image), nrow = 28, ncol = 28)
     yourMatrix <- apply(yourMatrix, 1, rev)
-    fashion_image <- image(1:28, 1:28, t(yourMatrix), col = gray(seq(0, 1, length = 256)))
+    fashion_image <- image(1:28, 1:28, t(yourMatrix), col = gray(seq(1, 0, length = 256)))
   })
   
   ####dynamic bar plots ####
@@ -141,7 +192,7 @@ shinyServer(function(input, output) {
   observe({
     lapply(1:nrow(reacs()), function(i){
       output[[paste("plot", i, sep="") ]] <- renderPlot({
-        barplot(unlist(reacs()[i,]$array), names.arg = c("Class 0", "Class 1",  "Class 2",  "Class 3",  "Class 4",  "Class 5",  "Class 6",  "Class 7",  "Class 8",  "Class 9"))
+        barplot(unlist(reacs()[i,]$array), col=barcolors, names.arg = c("Tshirt/Top","Trouser","Pullover","Dress","Coat","Sandal","Shirt","Sneaker","Bag","Ankle boot"))
       })
     })
   })
@@ -161,7 +212,7 @@ shinyServer(function(input, output) {
       output[[paste("plotimage", i, sep="") ]] <- renderPlot({
         yourMatrix <- matrix(unlist(reacs()[i,]$image), nrow = 28, ncol = 28)
         yourMatrix <- apply(yourMatrix, 1, rev)
-        image(1:28, 1:28, t(yourMatrix), col = gray(seq(0, 1, length = 256)))})
+        image(1:28, 1:28, t(yourMatrix), col = gray(seq(1, 0, length = 256)))})
     })
     }
 )
@@ -171,7 +222,7 @@ shinyServer(function(input, output) {
     selectInput("auswahl_sunburst_links", "Model Auswahl:", c(1,2,3)) 
   })
   
-  sunbrylinks <- reactive({sunburst(datapielist[as.integer(input$auswahl_sunburst_links)][[1]], count =  TRUE, legend = list(w = 150,h = 50, s = 15 , t = 1 ), breadcrumb = list(w = 150,h = 75, s = 15 , t = 10))})
+  sunbrylinks <- reactive({sunburst(datapielist[as.integer(input$auswahl_sunburst_links)][[1]], colors = colors, count =  TRUE, legend = list(w = 150,h = 50, s = 15 , t = 1 ), breadcrumb = list(w = 150,h = 75, s = 15 , t = 10))})
   #addedd add_shiny
   output$sunburst <- renderSunburst(add_shiny({sunbrylinks()}))
   
@@ -192,7 +243,7 @@ shinyServer(function(input, output) {
     selectInput("auswahl_sunburst_rechts", "Model Auswahl:", c(1,2,3)) 
   })
   
-  sunbryrechts <- reactive({sunburst(datapielist[as.integer(input$auswahl_sunburst_rechts)][[1]], count =  TRUE, legend = list(w = 150,h = 50, s = 15 , t = 1 ), breadcrumb = list(w = 150,h = 75, s = 15 , t = 10))})
+  sunbryrechts <- reactive({sunburst(datapielist[as.integer(input$auswahl_sunburst_rechts)][[1]], colors = colors ,count =  TRUE, legend = list(w = 150,h = 50, s = 15 , t = 1 ), breadcrumb = list(w = 150,h = 75, s = 15 , t = 10))})
   # added add_shiny 
   output$sunburst2 <- renderSunburst(add_shiny({sunbryrechts()}))
   
@@ -208,7 +259,7 @@ shinyServer(function(input, output) {
   
   #### weitere outputs
   
-  output$char <- renderChorddiag({chorddiag(myMat, type = "bipartite", showTicks = F, groupnameFontsize = 14, groupnamePadding = 10, margin = 90)}) 
+  output$char <- renderChorddiag({chorddiag(myMat, groupColors = groupColors, showTicks = F, groupnameFontsize = 14, groupnamePadding = 10, margin = 90)}) 
   
   
   output$heatmap_auswahl <- renderUI({
@@ -242,9 +293,8 @@ shinyServer(function(input, output) {
   
   ### bardiagram allg.
   
-  output$barchart_allg <- renderPlotly({plot_ly(ov, x = row.names(ov), y = ~mod1, type = 'bar', name = 'mod1')%>% add_trace(y = ~mod2, name = 'mod2')%>% layout(yaxis = list(title = 'Value') , barmode ='group')})
-  output$barchart_allg2 <- renderPlotly({plot_ly(df, x = row.names(df), y = ~mod1, type = 'bar', name = 'mod1')%>% add_trace(y = ~mod2, name = 'mod2')%>% layout(yaxis = list(title = 'Balanced accuracy') , barmode ='group')})
-  
+  output$barchart_allg <- renderPlotly({plot_ly(ov, x = row.names(ov), y = ~mod1, type = 'bar',marker = list(color = 'rgb(158,202,225)'), name = 'mod1')%>% add_trace(y = ~mod2, name = 'mod2',marker = list(color = 'rgb(258,102,125)'))%>% add_trace(y = ~mod3, name = 'mod3',marker = list(color = 'rgb(100,102,125)'))%>% layout(yaxis = list(title = 'Value') , barmode ='group')})
+  output$barchart_allg2 <- renderPlotly({plot_ly(df, x = row.names(df), y = ~mod1, type = 'bar',marker = list(color = 'rgb(158,202,225)'), name = 'mod1')%>% add_trace(y = ~mod2, name = 'mod2',marker = list(color = 'rgb(258,102,125)'))%>% add_trace(y = ~mod3, name = 'mod3',marker = list(color = 'rgb(100,102,125)'))%>% layout(yaxis = list(title = 'Balanced accuracy') , barmode ='group')})
 
   reacs <- reactive({
   d <- event_data("plotly_click")
@@ -307,7 +357,7 @@ shinyServer(function(input, output) {
   observe({
     lapply(1:nrow(reacs_sunburst_links()), function(i){
       output[[paste("plot_sunburst_links", i, sep="") ]] <- renderPlot({
-        barplot(unlist(reacs_sunburst_links()[i,]$array), names.arg = c("Class 0", "Class 1",  "Class 2",  "Class 3",  "Class 4",  "Class 5",  "Class 6",  "Class 7",  "Class 8",  "Class 9"))
+        barplot(unlist(reacs_sunburst_links()[i,]$array), col=barcolors, names.arg = c("Tshirt/Top","Trouser","Pullover","Dress","Coat","Sandal","Shirt","Sneaker","Bag","Ankle boot"))
       })
     })
   })
@@ -327,7 +377,7 @@ shinyServer(function(input, output) {
       output[[paste("plotimage_sunburst_links", i, sep="") ]] <- renderPlot({
         yourMatrix <- matrix(unlist(reacs_sunburst_links()[i,]$image), nrow = 28, ncol = 28)
         yourMatrix <- apply(yourMatrix, 1, rev)
-        image(1:28, 1:28, t(yourMatrix), col = gray(seq(0, 1, length = 256)))})
+        image(1:28, 1:28, t(yourMatrix), col = gray(seq(1, 0, length = 256)))})
     })
   }
   )
@@ -345,7 +395,7 @@ shinyServer(function(input, output) {
   observe({
     lapply(1:nrow(reacs_sunburst_rechts()), function(i){
       output[[paste("plot_sunburst_links", i, sep="") ]] <- renderPlot({
-        barplot(unlist(reacs_sunburst_rechts()[i,]$array), names.arg = c("Class 0", "Class 1",  "Class 2",  "Class 3",  "Class 4",  "Class 5",  "Class 6",  "Class 7",  "Class 8",  "Class 9"))
+        barplot(unlist(reacs_sunburst_rechts()[i,]$array), col=barcolors, names.arg = c("Tshirt/Top","Trouser","Pullover","Dress","Coat","Sandal","Shirt","Sneaker","Bag","Ankle boot"))
       })
     })
   })
@@ -365,7 +415,7 @@ shinyServer(function(input, output) {
       output[[paste("plotimage_sunburst_links", i, sep="") ]] <- renderPlot({
         yourMatrix <- matrix(unlist(reacs_sunburst_rechts()[i,]$image), nrow = 28, ncol = 28)
         yourMatrix <- apply(yourMatrix, 1, rev)
-        image(1:28, 1:28, t(yourMatrix), col = gray(seq(0, 1, length = 256)))})
+        image(1:28, 1:28, t(yourMatrix), col = gray(seq(1, 0, length = 256)))})
     })
   }
   )
