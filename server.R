@@ -77,7 +77,11 @@ myMatHeat2[as.matrix(data_heat2[c("label2", "predicted2")])] <- data_heat2[["fre
 myMatHeat2 <- t(myMatHeat2)
 
 
-datapielist <- list(data_pie, data_pie2)
+datapielist <- list(data_pie, data_pie2) # auswahl für sunbursts
+
+heatmap_list <- list(myMatHeat, myMatHeat2) # auswahl für heatmap
+
+data_for_heatmap_list <-list(data, data2) # datalist for heatmap auswahl
 
 
 library(caret)
@@ -191,6 +195,7 @@ shinyServer(function(input, output) {
   sunbryrechts <- reactive({sunburst(datapielist[as.integer(input$auswahl_sunburst_rechts)][[1]], count =  TRUE, legend = list(w = 150,h = 50, s = 15 , t = 1 ), breadcrumb = list(w = 150,h = 75, s = 15 , t = 10))})
   # added add_shiny 
   output$sunburst2 <- renderSunburst(add_shiny({sunbryrechts()}))
+  
   #test sunburst click right 
   selection_re <- reactive({
     input$sunburst2_click
@@ -205,7 +210,13 @@ shinyServer(function(input, output) {
   
   output$char <- renderChorddiag({chorddiag(myMat, type = "bipartite", showTicks = F, groupnameFontsize = 14, groupnamePadding = 10, margin = 90)}) 
   
-  output$heatmap <- renderPlotly({heatmaply(myMatHeat, cellnote = myMatHeat,  dendrogram = 'none', plot_method = 'plotly', column_text_angle = 0,label_names = c("predicted","class","count")) %>% layout(xaxis = list(position = 1, side = "top"))})
+  
+  output$heatmap_auswahl <- renderUI({
+    selectInput("heatmap_auswahl", "Model Auswahl:", c(1,2,3)) 
+  })
+  
+  
+  output$heatmap <- renderPlotly({heatmaply(heatmap_list[as.integer(input$heatmap_auswahl)][[1]], cellnote = heatmap_list[as.integer(input$heatmap_auswahl)][[1]],  dendrogram = 'none', plot_method = 'plotly', column_text_angle = 0,label_names = c("predicted","class","count")) %>% layout(xaxis = list(position = 1, side = "top"))})
   
   #output$click <- renderPrint({
   #  d <- event_data("plotly_click")
@@ -232,22 +243,133 @@ shinyServer(function(input, output) {
   ### bardiagram allg.
   
   output$barchart_allg <- renderPlotly({plot_ly(ov, x = row.names(ov), y = ~mod1, type = 'bar', name = 'mod1')%>% add_trace(y = ~mod2, name = 'mod2')%>% layout(yaxis = list(title = 'Value') , barmode ='group')})
-  #testing click on bar charts
-  output$barcklick1 <- renderPrint({
-    d <- event_data("plotly_click")
-    if (is.null(d)) "Click on Class" else d
-  })
-  
   output$barchart_allg2 <- renderPlotly({plot_ly(df, x = row.names(df), y = ~mod1, type = 'bar', name = 'mod1')%>% add_trace(y = ~mod2, name = 'mod2')%>% layout(yaxis = list(title = 'Balanced accuracy') , barmode ='group')})
   
 
-    reacs <- reactive({
-    d <- event_data("plotly_click")
-    labels <- get_labels(d$x,d$y)
-    frame_heat <- subset(data, label2 == labels[1] & predicted2 == labels[2])
+  reacs <- reactive({
+  d <- event_data("plotly_click")
+  labels <- get_labels(d$x,d$y)
+  
+  print(input$heatmap_auswahl)
+
+  if (is.null(input$heatmap_auswahl)){
+    x <- 1
+  }
+  else{
+    x <- input$heatmap_auswahl
+  }
+  
+  frame_heat <- subset(data_for_heatmap_list[[as.integer(x)]], label2 == labels[1] & predicted2 == labels[2])
+
     })
 
-  
+  reacs_sunburst_links <- reactive({
+    d <- selection_li()
     
+    print(input$auswahl_sunburst_links)
+    
+    if (is.null(input$auswahl_sunburst_links)){
+      x <- 1
+    }
+    else{
+      x <- input$auswahl_sunburst_links
+    }
+    
+    frame_sunburst_links <- subset(data_for_heatmap_list[[as.integer(x)]], label2 == d[1] & predicted2 == d[2])
+    
+  })
+  
+  reacs_sunburst_rechts <- reactive({
+    d <- selection_re()
+    
+    print(input$auswahl_sunburst_rechts)
+    
+    if (is.null(input$auswahl_sunburst_rechts)){
+      x <- 1
+    }
+    else{
+      x <- input$auswahl_sunburst_rechts
+    }
+
+
+    frame_sunburst_rechts <- subset(data_for_heatmap_list[[as.integer(x)]], label2 == d[1] & predicted2 == d[2])
+    
+  })
+  
+  output$plots_sunbrust_links <- renderUI({
+    plot_output_list <- lapply(1:nrow(reacs_sunburst_links()), function(i) {
+      plotname <- paste("plot_sunburst_links", i, sep="")
+      plotOutput(plotname)
+    })   
+    do.call(tagList, plot_output_list)
+  })
+  
+  observe({
+    lapply(1:nrow(reacs_sunburst_links()), function(i){
+      output[[paste("plot_sunburst_links", i, sep="") ]] <- renderPlot({
+        barplot(unlist(reacs_sunburst_links()[i,]$array), names.arg = c("Class 0", "Class 1",  "Class 2",  "Class 3",  "Class 4",  "Class 5",  "Class 6",  "Class 7",  "Class 8",  "Class 9"))
+      })
+    })
+  })
+  
+  ##### dynamic image #####
+  output$plotimages_sunburst_links <- renderUI({
+    plot_output_list <- lapply(1:nrow(reacs_sunburst_links()), function(i) {
+      plotname <- paste("plotimage_sunburst_links", i, sep="")
+      plotOutput(plotname)
+    })   
+    do.call(tagList, plot_output_list)
+  })
+  
+  
+  observe({
+    lapply(1:nrow(reacs_sunburst_links()), function(i){
+      output[[paste("plotimage_sunburst_links", i, sep="") ]] <- renderPlot({
+        yourMatrix <- matrix(unlist(reacs_sunburst_links()[i,]$image), nrow = 28, ncol = 28)
+        yourMatrix <- apply(yourMatrix, 1, rev)
+        image(1:28, 1:28, t(yourMatrix), col = gray(seq(0, 1, length = 256)))})
+    })
+  }
+  )
+  
+  ####rechts####
+  
+  output$plots_sunbrust_links <- renderUI({
+    plot_output_list <- lapply(1:nrow(reacs_sunburst_rechts()), function(i) {
+      plotname <- paste("plot_sunburst_links", i, sep="")
+      plotOutput(plotname)
+    })   
+    do.call(tagList, plot_output_list)
+  })
+  
+  observe({
+    lapply(1:nrow(reacs_sunburst_rechts()), function(i){
+      output[[paste("plot_sunburst_links", i, sep="") ]] <- renderPlot({
+        barplot(unlist(reacs_sunburst_rechts()[i,]$array), names.arg = c("Class 0", "Class 1",  "Class 2",  "Class 3",  "Class 4",  "Class 5",  "Class 6",  "Class 7",  "Class 8",  "Class 9"))
+      })
+    })
+  })
+  
+  ##### dynamic image #####
+  output$plotimages_sunburst_links <- renderUI({
+    plot_output_list <- lapply(1:nrow(reacs_sunburst_rechts()), function(i) {
+      plotname <- paste("plotimage_sunburst_links", i, sep="")
+      plotOutput(plotname)
+    })   
+    do.call(tagList, plot_output_list)
+  })
+  
+  
+  observe({
+    lapply(1:nrow(reacs_sunburst_rechts()), function(i){
+      output[[paste("plotimage_sunburst_links", i, sep="") ]] <- renderPlot({
+        yourMatrix <- matrix(unlist(reacs_sunburst_rechts()[i,]$image), nrow = 28, ncol = 28)
+        yourMatrix <- apply(yourMatrix, 1, rev)
+        image(1:28, 1:28, t(yourMatrix), col = gray(seq(0, 1, length = 256)))})
+    })
+  }
+  )
+  
+  
   }
 )
