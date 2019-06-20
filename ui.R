@@ -8,10 +8,9 @@ library(sunburstR)
 ## ui.R ##
 sidebar <- dashboardSidebar(
   sidebarMenu(
-    menuItem("Single Consideration", tabName = "single"),
     menuItem("Sunbrust Visualization", tabName = "sunbrust"),
     menuItem("Chord Diagram", tabName = "chord"),
-    menuItem("HeatMap", tabName = "heat"),
+    menuItem("Confusion Map", tabName = "heat"),
     menuItem("Bar Charts", tabName = "bar"))
   
 )
@@ -20,39 +19,25 @@ sidebar <- dashboardSidebar(
 plotvariable <- "plot_objects"
 body <- dashboardBody(
   tabItems(
-    tabItem(tabName = "single",
-            h2("Single Object Consideration"),
-            uiOutput("objects_x"),
-            fluidRow(
-              box(width = 10, height = 420,
-                  plotOutput(plotvariable)),
-              
-              box(width = 2, height = 420,
-                  plotOutput("fashion_output", height=320, width =320))
-              
-            )
-
-    ),
-    
     tabItem(tabName = "sunbrust",
             h2("Sunbrust Visualization"),
             fluidRow(
               
               box(
                 uiOutput("sunburst_auswahl_links"),
-                sunburstOutput("sunburst", width = "500", height = "500")),
+                sunburstOutput("sunburst", width = "100%", height = "800")),
               
               box(
                 uiOutput("sunburst_auswahl_rechts"),
-                sunburstOutput("sunburst2", width = "500", height = "500"))
+                sunburstOutput("sunburst2", width = "100%", height = "800"))
               
               
             ),
             fluidRow(
-              box(width = 10, height = 5000,
+              box(width = 8, height = 5000,
                   uiOutput("plots_sunbrust_links")),
               
-              box(width = 2, height = 5000,
+              box(width = 4, height = 5000,
                   uiOutput("plotimages_sunburst_links"))
             )
     ),
@@ -60,12 +45,13 @@ body <- dashboardBody(
             h2("Chord Visualization"),
             fluidRow(
               column(10, align="center", 
-                     chorddiagOutput("char", width = "1200", height = "1200")
+                     uiOutput("chord_auswahl"),
+                     chorddiagOutput("char", width = "1000", height = "1000")
               )
             )
     ),
     tabItem(tabName = "heat",
-            h2("Heat Map"),
+            h2("Confusion Map"),
             fluidRow(
               
               column(10, align="center", 
@@ -77,10 +63,10 @@ body <- dashboardBody(
               )  
             ),
             fluidRow(
-              box(width = 10, height = 5000,
+              box(width = 8, height = 5000,
                   uiOutput("plots")),
               
-              box(width = 2, height = 5000,
+              box(width = 4, height = 5000,
                   uiOutput("plotimages"))
             )
     ),
@@ -106,4 +92,3 @@ dashboardPage(
   sidebar,
   body
 )
- 
