@@ -21,7 +21,7 @@ barcolors = c("#E1974C","#FFB6C1","#9067A7","#808585","#D35E60","#AB6857","#CCC2
 
 ## model 1
 ## data preparation ##
-data <- read_json('test3.json')
+data <- read_json('test.json')
 data <- data.frame(do.call(rbind,data))
 data$label <- unlist(data$label)
 data$label2 <- unlist(data$label2)
@@ -54,7 +54,7 @@ myMatHeat <- t(myMatHeat)
 
 ## model 2
 ## data preparation ##
-data2 <- read_json('model2.json')
+data2 <- read_json('test2.json')
 data2 <- data.frame(do.call(rbind,data2))
 data2$label <- unlist(data2$label)
 data2$label2 <- unlist(data2$label2)
@@ -126,6 +126,8 @@ heatmap_list <- list(myMatHeat, myMatHeat2, myMatHeat3) # auswahl für heatmap
 
 data_for_heatmap_list <-list(data, data2, data3) # datalist for heatmap auswahl
 
+data_for_chord_list <-list(myMat, myMat2, myMat3)
+
 
 
 #Matric Model 1
@@ -159,23 +161,7 @@ df$mod3 <- df3$Balanced.Accuracy
 
 shinyServer(function(input, output) {
   
-  output$objects_x <- renderUI({
-    selectInput("TrainingObject", "Choose Training Objects:", as.list(data$ID)) 
-  })
-  
-  y <- reactive({unlist(data[input$TrainingObject,]$array)})
-  output$plot_objects <- renderPlot({
-    
-  barplot(y(), names.arg = c("Tshirt/Top","Trouser","Pullover","Dress","Coat","Sandal","Shirt","Sneaker","Bag","Ankle boot"))
-    
-  })
-  
-  array_image <- reactive({
-    yourMatrix <- matrix(unlist(data[input$TrainingObject,]$image), nrow = 28, ncol = 28)
-    yourMatrix <- apply(yourMatrix, 1, rev)
-    fashion_image <- image(1:28, 1:28, t(yourMatrix), col = gray(seq(1, 0, length = 256)))
-  })
-  
+
   ####dynamic bar plots ####
   
   output$fashion_output <- renderPlot({
@@ -258,8 +244,11 @@ shinyServer(function(input, output) {
   })
   
   #### weitere outputs
+  output$chord_auswahl <- renderUI({
+    selectInput("chord_auswahl", "Model Auswahl:", c(1,2,3)) 
+  })
   
-  output$char <- renderChorddiag({chorddiag(myMat, groupColors = groupColors, showTicks = F, groupnameFontsize = 14, groupnamePadding = 10, margin = 90)}) 
+  output$char <- renderChorddiag({chorddiag(data_for_chord_list[as.integer(input$chord_auswahl)][[1]], groupColors = groupColors, showTicks = F, groupnameFontsize = 14, groupnamePadding = 10, margin = 90)}) 
   
   
   output$heatmap_auswahl <- renderUI({
