@@ -87,7 +87,7 @@ myMatHeat2 <- t(myMatHeat2)
 
 ## model 3
 ## data preparation ##
-data3 <- read_json('test3.json')
+data3 <- read_json('test4.json')
 data3 <- data.frame(do.call(rbind,data3))
 data3$label <- unlist(data3$label)
 data3$label2 <- unlist(data3$label2)
@@ -152,7 +152,7 @@ df$mod2 <- df2$Balanced.Accuracy
 mat3 <- confusionMatrix(factor(data3$predicted2),factor(data3$label2))
 mat_by_label3 <- data.frame(mat3$byClass)
 ov3 <- data.frame(mat3$overall)
-df3 <- subset(mat_by_label2, select = c('Balanced.Accuracy'))
+df3 <- subset(mat_by_label3, select = c('Balanced.Accuracy'))
 ov$mod3 <- ov3$mat3.overall
 df$mod3 <- df3$Balanced.Accuracy
 
@@ -161,7 +161,7 @@ df$mod3 <- df3$Balanced.Accuracy
 
 shinyServer(function(input, output) {
   
-
+  
   ####dynamic bar plots ####
   
   output$fashion_output <- renderPlot({
@@ -200,8 +200,8 @@ shinyServer(function(input, output) {
         yourMatrix <- apply(yourMatrix, 1, rev)
         image(1:28, 1:28, t(yourMatrix), col = gray(seq(1, 0, length = 256)))})
     })
-    }
-)
+  }
+  )
   #### sunburst output links #### 
   
   output$sunburst_auswahl_links <- renderUI({
@@ -284,24 +284,24 @@ shinyServer(function(input, output) {
   
   output$barchart_allg <- renderPlotly({plot_ly(ov, x = row.names(ov), y = ~mod1, type = 'bar',marker = list(color = 'rgb(158,202,225)'), name = 'mod1')%>% add_trace(y = ~mod2, name = 'mod2',marker = list(color = 'rgb(258,102,125)'))%>% add_trace(y = ~mod3, name = 'mod3',marker = list(color = 'rgb(100,102,125)'))%>% layout(yaxis = list(title = 'Value') , barmode ='group')})
   output$barchart_allg2 <- renderPlotly({plot_ly(df, x = row.names(df), y = ~mod1, type = 'bar',marker = list(color = 'rgb(158,202,225)'), name = 'mod1')%>% add_trace(y = ~mod2, name = 'mod2',marker = list(color = 'rgb(258,102,125)'))%>% add_trace(y = ~mod3, name = 'mod3',marker = list(color = 'rgb(100,102,125)'))%>% layout(yaxis = list(title = 'Balanced accuracy') , barmode ='group')})
-
+  
   reacs <- reactive({
-  d <- event_data("plotly_click")
-  labels <- get_labels(d$x,d$y)
+    d <- event_data("plotly_click")
+    labels <- get_labels(d$x,d$y)
+    
+    print(input$heatmap_auswahl)
+    
+    if (is.null(input$heatmap_auswahl)){
+      x <- 1
+    }
+    else{
+      x <- input$heatmap_auswahl
+    }
+    
+    frame_heat <- subset(data_for_heatmap_list[[as.integer(x)]], label2 == labels[1] & predicted2 == labels[2])
+    
+  })
   
-  print(input$heatmap_auswahl)
-
-  if (is.null(input$heatmap_auswahl)){
-    x <- 1
-  }
-  else{
-    x <- input$heatmap_auswahl
-  }
-  
-  frame_heat <- subset(data_for_heatmap_list[[as.integer(x)]], label2 == labels[1] & predicted2 == labels[2])
-
-    })
-
   reacs_sunburst_links <- reactive({
     d <- selection_li()
     
@@ -329,8 +329,8 @@ shinyServer(function(input, output) {
     else{
       x <- input$auswahl_sunburst_rechts
     }
-
-
+    
+    
     frame_sunburst_rechts <- subset(data_for_heatmap_list[[as.integer(x)]], label2 == d[1] & predicted2 == d[2])
     
   })
