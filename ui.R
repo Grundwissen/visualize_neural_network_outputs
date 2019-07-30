@@ -71,7 +71,7 @@ body <- dashboardBody(
             )
     ),
     tabItem(tabName = "bar",
-            h2("Bar Chart"),
+            h2("Model comparison"),
             fluidRow(
               column(10, align="center",
                      plotlyOutput("barchart_allg", width = "100%", height="600px"),
